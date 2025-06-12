@@ -4,7 +4,7 @@ import numpy as np
 import ImageContainer as IC
 
 image_0_path = "dataset/manual/20250612_160817.jpg"
-image_0 = IC.ImageContiner(image_0_path)
+image_0 = IC.ImageContainer(image_0_path)
 image_0.show("Оригінальне зображення")
 
 image_0 = IC.average_channels(image_0)

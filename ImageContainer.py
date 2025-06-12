@@ -1,11 +1,13 @@
 import numpy as np
 from PIL import Image
 from scipy.ndimage import convolve
+import skimage
 import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
 from copy import deepcopy
+import matplotlib.patches as patches
 
-class ImageContiner:
+class ImageContainer:
     def __init__(self, source, HSV = False):
         # Якщо на вхід рядок -- відкрити як шлях, якщо масив -- відкрити як масив пікселів
         if isinstance(source, str):
@@ -28,30 +30,43 @@ class ImageContiner:
         plt.title(title)
         plt.show()
 
-def to_hsv(input_IC: ImageContiner):
-    return ImageContiner(mcolors.rgb_to_hsv(input_IC.array), HSV = True)
+    def show_with_polygon(self, polygon, title = ""):
+        fig, ax = plt.subplots()
+        if self.HSV:
+            plt.imshow(mcolors.hsv_to_rgb(self.array))
+        else:
+            plt.imshow(self.array)
+        ax.set_ylim(self.array.shape[0], 0)
+        poly_patch = patches.Polygon(polygon, closed=True, edgecolor='red', facecolor='none', linewidth=2)
+        ax.add_patch(poly_patch)
+        plt.axis("off")
+        plt.title(title)
+        plt.show()
 
-def average_channels(input_IC: ImageContiner):
+def to_hsv(input_IC: ImageContainer):
+    return ImageContainer(mcolors.rgb_to_hsv(input_IC.array), HSV = True)
+
+def average_channels(input_IC: ImageContainer):
     img_array = deepcopy(input_IC.array)
     mean = np.mean(img_array, axis = -1)
     img_array[:,:,0] = mean
     img_array[:, :, 1] = mean
     img_array[:, :, 2] = mean
-    return ImageContiner(img_array, HSV = input_IC.HSV)
+    return ImageContainer(img_array, HSV = input_IC.HSV)
 
-def apply_kernel(input_IC: ImageContiner, kernel: np.array):
+def apply_kernel(input_IC: ImageContainer, kernel: np.array):
     img_array = deepcopy(input_IC.array)
-    return ImageContiner(np.clip(np.stack([
+    return ImageContainer(np.clip(np.stack([
         convolve(img_array[..., c], kernel, mode='reflect')
         for c in range(3)
     ], axis=-1),0, 254*(np.max(img_array)>1) + 1), HSV = input_IC.HSV)
 
-def binarize(input_IC: ImageContiner, threshold: float = 0.5):
+def binarize(input_IC: ImageContainer, threshold: float = 0.5):
     img_array = np.zeros_like(input_IC.array)
     img_array[input_IC.array > threshold] = 1
-    return ImageContiner(img_array, HSV = input_IC.HSV)
+    return ImageContainer(img_array, HSV = input_IC.HSV)
 
-def dynamic_binarize(input_IC: ImageContiner, mask: float = 0.1, mask_epsilon: float = 0.005, step_epsilon: float = 0.05):
+def dynamic_binarize(input_IC: ImageContainer, mask: float = 0.1, mask_epsilon: float = 0.005, step_epsilon: float = 0.05):
     threshold = 0.5
     step = 0.25
     img_array = np.zeros_like(input_IC.array)
@@ -66,6 +81,13 @@ def dynamic_binarize(input_IC: ImageContiner, mask: float = 0.1, mask_epsilon: f
         img_array = np.zeros_like(input_IC.array)
         img_array[input_IC.array > threshold] = 1
         mean = np.mean(img_array)
-    return ImageContiner(img_array, HSV=input_IC.HSV)
+    return ImageContainer(img_array, HSV=input_IC.HSV)
+
+def resize(input_IC: ImageContainer, factor: float):
+    array = skimage.transform.resize(input_IC.array,
+           output_shape=(int(input_IC.array.shape[0] * factor), int(input_IC.array.shape[1] * factor)),
+           preserve_range=True,  # keep original intensity values
+           anti_aliasing=True)
+    return ImageContainer(array)
 
 
