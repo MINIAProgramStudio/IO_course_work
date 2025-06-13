@@ -79,7 +79,7 @@ def distance_lined_complex(positions, length_func, polygon):
     for i in range(positions.shape[0]):
         if is_point_in_polygon(positions[i], polygon):
             dists[i] = -dists[i]
-    return ((max(perimeter, 80)-np.sum(dists < 1))**2)/perimeter + (np.abs(np.sum(dists[dists<-1]))+1)
+    return  (np.abs(np.sum(dists[dists<-1]))*2**3+1)/(np.sum(dists[np.logical_and(0 < dists, dists < 3)]**2)+0.01)
 
 
 def cross(a, b):
@@ -174,7 +174,7 @@ def Genetic_bed_finder(input_IC, progressbar = False, stats = False):
     if stats:
         result = solver.solve(100, progressbar=progressbar)
     else:
-        result = solver.solve_stats(100, progressbar=progressbar, epsilon=10**(-2), epsilon_timeout=5)
+        result = solver.solve_stats(100, progressbar=progressbar, epsilon=10**(-6), epsilon_timeout=10)
     result = list(result)
     result[1] = order_quad_vertices(result[1])
     return result
