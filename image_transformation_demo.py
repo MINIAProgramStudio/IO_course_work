@@ -3,8 +3,8 @@ import numpy as np
 
 import ImageContainer as IC
 
-image_0_path = "dataset/manual/20250612_160826.jpg"
-image_0 = IC.ImageContainer(image_0_path)
+
+"""
 image_0.show("Оригінальне зображення")
 
 image_0 = IC.to_hsv(image_0)
@@ -18,10 +18,12 @@ for i in range(image_0.array.shape[0]):
             image_0.array[i][j] = np.array([0.33, 1, 1])
 image_0.show("Зображення з третім набором правил")
 
-image_0 = IC.ImageContainer(image_0_path)
+image_0 = IC.ImageContainer(image_0_path)"""
 
-image_0 = IC.average_channels(image_0)
-image_0.show("Середнє каналів зображення")
+image_0_path = "img/DSExample1.jpg"
+image_0 = IC.ImageContainer(image_0_path)
+image_0 = IC.resize(image_0, 0.125)
+image_0.show("Оригінальне зображення")
 
 kernel = np.array([
     [-1, -1, -1],
@@ -29,13 +31,17 @@ kernel = np.array([
     [-1, -1, -1]
 ])
 
-image_0_borders = IC.apply_kernel(image_0, kernel)
-image_0_borders.show("Зображення після фільтрування границь")
+image_0 = IC.apply_kernel(image_0, kernel)
+image_0.show()
 
-image_0_binarized = IC.binarize(image_0_borders, 0.2)
+image_0 = IC.average_channels(image_0)
+image_0.show("Границі HSV зображення")
+
+
+image_0_binarized = IC.binarize(image_0, 0.2)
 image_0_binarized.show("Порогова бінаризація (0.2)")
-
-image_0_binarized = IC.dynamic_binarize(image_0_borders, 0.005, 0.001, 0.001)
-image_0_binarized.show("Динамічна бінаризація (0.005)")
+exit()
+image_0_binarized = IC.dynamic_binarize(image_0, 0.1, 0.001, 0.00001)
+image_0_binarized.show("Динамічна бінаризація (0.1)")
 
 
