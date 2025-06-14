@@ -89,4 +89,10 @@ def resize(input_IC: ImageContainer, factor: float):
            anti_aliasing=True)
     return ImageContainer(array)
 
+def to_positions(input_IC: ImageContainer):
+    array = input_IC.array
+    positions = np.argwhere(array[:, :, 1] > 0)
+    p = np.zeros_like(positions)
+    p[:, 0], p[:, 1] = positions[:, 1], positions[:, 0]
+    return p
 
