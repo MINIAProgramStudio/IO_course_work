@@ -1,0 +1,148 @@
+import numpy as np
+import ImageContainer as IC
+
+def order_quad_vertices(pos):
+    points = np.round(np.array(pos).reshape((4, 2)))
+    center = np.mean(points, axis=0)
+    angles = np.arctan2(points[:, 1] - center[1], points[:, 0] - center[0])
+    sort_idx = np.argsort(angles)
+    ordered = points[sort_idx]
+    return ordered
+
+class Quad:
+    def __init__(self, pos):
+        self.vertices = order_quad_vertices(pos)
+        self.edge_lengths = [np.linalg.norm(self.vertices[i] - self.vertices[(i+1)%1])
+                             for i in range(4)]
+        self.edge_angles = [np.pi + np.arctan(
+            (self.vertices[i][1]-self.vertices[i+1][1])/(self.vertices[i][0]-self.vertices[i+1][0])
+        ) for i in range(4)]
+
+        d1 = np.linalg.norm(self.vertices[0] - self.vertices[2])
+        d2 = np.linalg.norm(self.vertices[1] - self.vertices[3])
+        v1 = self.vertices[0] - self.vertices[2]
+        v2 = self.vertices[1] - self.vertices[3]
+        cos_theta = np.dot(v1, v2) / (d1 * d2 + 1e-12)
+        sin_theta = np.sqrt(1 - cos_theta ** 2)
+        self.space = 0.5 * d1 * d2 * sin_theta
+        self.perimeter = sum(self.edge_lengths)
+
+
+def length_equality(quad):
+    return (quad.edge_lengths[0]-quad.edge_lengths[2])**2/(quad.edge_lengths[0]+quad.edge_lengths[2]) + \
+        (quad.edge_lengths[1] - quad.edge_lengths[3]) ** 2 / (quad.edge_lengths[1] + quad.edge_lengths[3])
+
+def angle_equality(quad):
+    return (quad.edge_angles[0] - quad.edge_angles[2]) ** 2 / (quad.edge_angles[0] + quad.edge_angles[2]) + \
+        (quad.edge_angles[1] - quad.edge_angles[3]) ** 2 / (quad.edge_angles[1] + quad.edge_angles[3])
+
+def bresenham(x0, y0, x1, y1):
+    p = []
+    delta_x = abs(x1 - x0)
+    delta_y = abs(y1 - y0)
+    sign_x = x1 >= x0
+    sign_y = y1 >= y0
+
+    if delta_x >= delta_y:
+        d = x0
+        s = y0
+        delta_d = delta_x
+        delta_s = delta_y
+        sign_s = sign_y
+        sign_d = sign_x
+        d1 = x1
+    else:
+        d = y0
+        s = x0
+        delta_d = delta_y
+        delta_s = delta_x
+        sign_s = sign_x
+        sign_d = sign_y
+        d1 = y1
+    error = np.floor(delta_d/2)
+    while d < d1:
+        if delta_x >= delta_y:
+            p.append([d, s])
+        else:
+            p.append([s, d])
+        error -= delta_s
+        if error < 0:
+            s += sign_s
+            error += delta_s
+        d += sign_d
+    p.append([x1, y1])
+    return np.array(p)
+
+def bresenham_counter(x0, y0, x1, y1, input_IC):
+    p = 0
+    delta_x = abs(x1 - x0)
+    delta_y = abs(y1 - y0)
+    sign_x = x1 >= x0
+    sign_y = y1 >= y0
+
+    if delta_x >= delta_y:
+        d = x0
+        s = y0
+        delta_d = delta_x
+        delta_s = delta_y
+        sign_s = sign_y
+        sign_d = sign_x
+        d1 = x1
+    else:
+        d = y0
+        s = x0
+        delta_d = delta_y
+        delta_s = delta_x
+        sign_s = sign_x
+        sign_d = sign_y
+        d1 = y1
+    error = np.floor(delta_d/2)
+    while d < d1:
+        if delta_x >= delta_y:
+            p += input_IC.array[s][d][0]
+        else:
+            p += input_IC.array[d][s][0]
+        error -= delta_s
+        if error < 0:
+            s += sign_s
+            error += delta_s
+        d += sign_d
+    p += input_IC.array[y1][x1][0]
+    return p
+
+def b_4(quad, input_IC):
+    p_sum = 0
+    for i in range(4):
+        p_sum += bresenham_counter(quad.vertices[i][0], quad.vertices[i][1], quad.vertices[(i+1)%4][0], quad.vertices[(i+1)%4][1], input_IC)
+
+def theta_b_4(quad, input_IC):
+    return quad.perimeter/b_4(quad, input_IC)
+
+def is_point_in_quad(point, quad):
+    x, y = point
+    inside = False
+    for i in range(4):
+        xi, yi = quad.vertices[i]
+        xj, yj = quad.vertices[(i + 1) % 4]
+        intersect = ((yi > y) != (yj > y)) and \
+                    (x < (xj - xi) * (y - yi) / (yj - yi + 1e-12) + xi)
+        if intersect:
+            inside = not inside
+    return inside
+
+def theta_c(quad, input_IC_points):
+    c = 0
+    for point in input_IC_points:
+        if is_point_in_quad(point, quad):
+            c += 1
+    return c/quad.space
+
+def fitness_constructor(input_IC, consts):
+    input_IC_points = IC.to_positions(input_IC)
+    def fitness(pos):
+        quad = Quad(pos)
+        return (length_equality(quad) + consts[0]) * \
+            (angle_equality(quad) + consts[1]) * \
+            (theta_b_4(quad, input_IC) + consts[2]) * \
+            (theta_c(quad, input_IC_points))
+    return fitness
