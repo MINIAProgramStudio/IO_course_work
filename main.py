@@ -3,7 +3,6 @@ import numpy as np
 import ImageContainer as IC
 import BedFinder
 
-
 if __name__ == "__main__":
     image_0_path = "dataset/manual/20250612_160820.jpg"
     image_0 = IC.ImageContainer(image_0_path)
@@ -30,9 +29,44 @@ if __name__ == "__main__":
     #temp_IC.show("Границі")
     temp_IC = IC.dynamic_binarize(temp_IC, 0.075, 0.001, 0.001)
     #temp_IC.show("Маска")
+    points = BedFinder.IC_to_positions(temp_IC)
+
+
+    func = BedFinder.fitness_constructor(points, BedFinder.point_to_segment_distance, BedFinder.rectangleness)
+    p = [
+        73, 84,
+        120, 60,
+        102, 126,
+        152, 96
+    ]
+    polygon = BedFinder.order_quad_vertices(p)
+    print(func(p))
+    for point in points:
+        if BedFinder.is_point_in_polygon(point, polygon):
+            temp_IC.array[point[1]][point[0]] = np.array([0, 1, 0])
+    temp_IC.show_with_polygon(polygon, title="Теоретичний стіл")
+
+
+
     pos = BedFinder.Genetic_bed_finder(image_0, progressbar=True)
-    print(pos[1])
+    polygon = pos[1]
     plt.plot(pos[2])
     plt.yscale("log")
     plt.show()
-    temp_IC.show_with_polygon(pos[1], title = "Стіл знайдений за допомогою генетичного алгоритму")
+    temp_IC = IC.average_channels(image_0)
+    kernel = np.array([
+        [-1, -1, -1],
+        [-1, 8, -1],
+        [-1, -1, -1]
+    ])
+
+    temp_IC = IC.apply_kernel(temp_IC, kernel)
+    # temp_IC.show("Границі")
+    temp_IC = IC.dynamic_binarize(temp_IC, 0.075, 0.001, 0.001)
+    # temp_IC.show("Маска")
+    points = BedFinder.IC_to_positions(temp_IC)
+    for point in points:
+        if BedFinder.is_point_in_polygon(point, polygon):
+            temp_IC.array[point[1]][point[0]] = np.array([0, 1, 0])
+    temp_IC.show_with_polygon(polygon, title="Генетичний стіл")
+

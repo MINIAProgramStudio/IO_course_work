@@ -29,9 +29,12 @@ class GeneticSolver:
         with Pool(os.cpu_count()*2//3) as pool:
             # Паралельно обчислити значення func для кожної хромосоми
             fitness_values = pool.map(self.func, self.pop)
+
         pop_with_fitness = list(zip(self.pop, fitness_values))
         pop_with_fitness.sort(key=lambda x: x[1], reverse=not self.seeking_min)
+
         self.pop = [chrom for chrom, fit in pop_with_fitness[:self.pop_size]]
+        print(self.func(self.pop[0]), self.func(self.pop[-1]))
         return self.pop[0]
 
     def crossover(self):
@@ -66,7 +69,7 @@ class GeneticSolver:
                 pos = np.array(self.pop[i])
                 pos[::2] -= average_pos[0]
                 pos[1::2] -= average_pos[1]
-                rotate = random()*self.mutation_pow - self.mutation_pow
+                rotate = random()*self.mutation_pow - self.mutation_pow/2
                 pos[::2] = pos[::2] * np.cos(rotate) - pos[1::2] * np.sin(rotate)
                 pos[1::2] = pos[::2] * np.sin(rotate) + pos[1::2] * np.cos(rotate)
                 pos[::2] += average_pos[0]
@@ -107,6 +110,7 @@ class GeneticSolver:
 
     def solve_stats(self, iterations, progressbar = True, epsilon_timeout = float("inf"), epsilon = 0, show = False):
         y = []
+        worst_y = []
         if progressbar:
             iterator = tqdm(range(iterations))
         else:
@@ -120,7 +124,7 @@ class GeneticSolver:
             self.mutate_clever()
             self.select()
             y.append(self.func(self.pop[0]))
-
+            worst_y.append(self.func(self.pop[1]))
             if self.func(self.pop[0]) - self.func(old_best) >= epsilon and not self.seeking_min:
                 epsilon_timeout_counter = 0
             elif self.func(old_best) - self.func(self.pop[0]) >= epsilon and self.seeking_min:
@@ -131,6 +135,7 @@ class GeneticSolver:
                     break
         self.select()
         y.append(self.func(self.pop[0]))
+        worst_y.append(self.func(self.pop[1]))
         if show:
             x = range(len(y))
             fig = plt.figure()
@@ -140,7 +145,7 @@ class GeneticSolver:
             ax.set_xlabel("iteration")
             ax.set_ylabel("best value")
             plt.show()
-        return (self.func(self.pop[0]), self.pop[0], y)
+        return (self.func(self.pop[0]), self.pop[0], y, worst_y)
 
     def anisolve(self, iterations, save = False):
         if self.dimensions != 2:

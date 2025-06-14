@@ -36,7 +36,6 @@ class ImageContainer:
             plt.imshow(mcolors.hsv_to_rgb(self.array))
         else:
             plt.imshow(self.array)
-        ax.set_ylim(self.array.shape[0], 0)
         poly_patch = patches.Polygon(polygon, closed=True, edgecolor='red', facecolor='none', linewidth=2)
         ax.add_patch(poly_patch)
         plt.axis("off")

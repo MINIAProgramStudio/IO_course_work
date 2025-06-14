@@ -9,14 +9,14 @@ import os
 
 def IC_to_positions(input_IC: IC.ImageContainer):
     array = input_IC.array
-    positions = np.argwhere(array[:, :, 1] == 1)
-    return positions
+    positions = np.argwhere(array[:, :, 1] > 0)
+    p = np.zeros_like(positions)
+    p[:, 0], p[:, 1] = positions[:, 1], positions[:, 0]
+    return p
 
 def order_quad_vertices(pos):
 
-    pos = np.array(pos).reshape((4, 2))
-    points = np.zeros_like(pos)
-    points[:, 0], points[:, 1] = pos[:, 1], pos[:, 0]
+    points = np.round(np.array(pos).reshape((4, 2)))
     center = np.mean(points, axis=0)
     angles = np.arctan2(points[:, 1] - center[1], points[:, 0] - center[0])
     sort_idx = np.argsort(angles)
@@ -39,7 +39,7 @@ def distance_for_point_constructor(length_func, edges):
 
 def is_point_in_polygon(point, polygon):
     # polygon - масив вершин (N, 2), point - (2,)
-    x, y = point
+    x, y = point # якогось біса треба міняти X та Y, я не знаю чому
     n = len(polygon)
     inside = False
 
@@ -59,27 +59,41 @@ def distance_complex(positions, length_func, polygon):
     mean_dists = np.mean(dists)
     for i in range(positions.shape[0]):
         if is_point_in_polygon(positions[i], polygon):
-            dists[i] = -((dists[i]*100)**8)
+            dists[i] = dists[i]*100
     dists[dists > mean_dists//20] = 0
     dists[dists>0] = mean_dists/(dists[dists>0]+0.01) # more value in lower distances
-    return positions.shape[0]/sum(dists)*(np.sum(dists>0))
+    average = np.array([112, 90])
+    if is_point_in_polygon(average, polygon):
+        return positions.shape[0]/sum(dists)*(np.sum(dists>0))
+    else:
+        return float("inf")
 
 def distance_lined(positions, length_func, polygon):
     edges = [(polygon[i], polygon[(i + 1) % 4]) for i in range(4)]
     perimeter = np.sum([np.sqrt(np.sum((polygon[i]-polygon[(i+1)% 4])**2)) for i in range(4)])
     distance_for_point = distance_for_point_constructor(length_func, edges)
     dists = np.array(list(map(distance_for_point, positions)))
-    return ((max(perimeter, 80)-np.sum(dists < 1))**2)/perimeter + 0.000001
+    average = np.array([112, 90])
+    if is_point_in_polygon(average, polygon):
+        return max(((max(perimeter, 80) - np.sum(dists < 1))**2)/perimeter, 0.1)
+    else:
+        return ((max(perimeter, 80) - np.sum(dists < 1)) ** 2) * distance_for_point(average)**2/ perimeter + 1
 
 def distance_lined_complex(positions, length_func, polygon):
     edges = [(polygon[i], polygon[(i + 1) % 4]) for i in range(4)]
     perimeter = np.sum([np.sqrt(np.sum((polygon[i]-polygon[(i+1)% 4])**2)) for i in range(4)])
     distance_for_point = distance_for_point_constructor(length_func, edges)
     dists = np.array(list(map(distance_for_point, positions)))
+    counter = 0
     for i in range(positions.shape[0]):
         if is_point_in_polygon(positions[i], polygon):
-            dists[i] = -dists[i]
-    return  (np.abs(np.sum(dists[dists<-1]))*2**3+1)/(np.sum(dists[np.logical_and(0 < dists, dists < 3)]**2)+0.01)
+            if dists[i] > 2:
+                counter += 1
+    average = np.array([112, 90])
+    if is_point_in_polygon(average, polygon):
+        return ((max(perimeter, 80) - np.sum(dists < 1)) ** 2 + counter) / perimeter + 0.001
+    else:
+        return ((max(perimeter, 80) - np.sum(dists < 0.5)) ** 2 + counter) * distance_for_point(average)**2/ perimeter + 0.001
 
 
 def cross(a, b):
@@ -113,7 +127,7 @@ def rectangleness(polygon):
     MSE_diag = np.sum([(1-diag/mean_diag_lengths)**2
                          for diag in diag_lengths])
     if is_convex_quad(polygon):
-        return (max(MSE_length,MSE_diag)+0.1)
+        return max(MSE_length, MSE_diag, 0.01)
     else:
         return float("inf")
 
@@ -122,7 +136,7 @@ def fitness_constructor(positions, length_func, rect_func):
         if np.any(np.array(pos)<0) or np.any(np.array(pos) > np.max(positions)+5):
             return float("inf")
         polygon = order_quad_vertices(pos)
-        dist = distance_lined_complex(positions, length_func, polygon)
+        dist = distance_lined(positions, length_func, polygon)
         rect = rect_func(polygon)
         return dist*rect
     return fitness
@@ -142,7 +156,7 @@ def PSOBed_finder(input_IC, progressbar = False, stats = False):
     solver = PSOSolver({
         "a1": 1.5,  # self acceleration number
         "a2": 2,  # population acceleration number
-        "pop_size": 30,  # population size
+        "pop_size": 100,  # population size
         "dim": 8,  # dimensions
         "pos_min": np.zeros(8),  # vector of minimum positions
         "pos_max": np.array([temp_IC.array.shape[0], temp_IC.array.shape[1]]*4),  # vector of maximum positions
@@ -170,11 +184,11 @@ def Genetic_bed_finder(input_IC, progressbar = False, stats = False):
     temp_IC = IC.dynamic_binarize(temp_IC, 0.075, 0.001, 0.001)
     positions = IC_to_positions(temp_IC)
     fit_func = fitness_constructor(positions, point_to_segment_distance, rectangleness)
-    solver = GeneticSolver(fit_func, 100, 400, 2000, 8, np.array([[0,temp_IC.array.shape[0]], [0,temp_IC.array.shape[1]]]*4), 0.05, 0.2, seeking_min=True)
+    solver = GeneticSolver(fit_func, 50, 200, 750, 8, np.array([[0,temp_IC.array.shape[0]], [0,temp_IC.array.shape[1]]]*4), 0.05, 0.1, seeking_min=True)
     if stats:
         result = solver.solve(100, progressbar=progressbar)
     else:
-        result = solver.solve_stats(100, progressbar=progressbar, epsilon=10**(-6), epsilon_timeout=10)
+        result = solver.solve_stats(100, progressbar=progressbar, epsilon=10**(-8), epsilon_timeout=10)
     result = list(result)
     result[1] = order_quad_vertices(result[1])
     return result
