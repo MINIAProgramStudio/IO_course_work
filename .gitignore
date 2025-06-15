@@ -165,3 +165,6 @@ report.out
 report.fls
 report.fdb_latexmk
 report.aux
+*.keras
+*.tfrecord
+

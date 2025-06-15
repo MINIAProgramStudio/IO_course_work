@@ -90,6 +90,13 @@ def resize(input_IC: ImageContainer, factor: float):
            anti_aliasing=True)
     return ImageContainer(array)
 
+def resize_to(input_IC: ImageContainer, width, height):
+    array = skimage.transform.resize(input_IC.array,
+           output_shape=(width, height),
+           preserve_range=True,  # keep original intensity values
+           anti_aliasing=True)
+    return ImageContainer(array)
+
 def to_positions(input_IC: ImageContainer):
     array = input_IC.array
     positions = np.argwhere(array[:, :, 1] > 0)
