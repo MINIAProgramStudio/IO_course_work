@@ -15,7 +15,7 @@ class Quad:
         self.edge_lengths = [np.linalg.norm(self.vertices[i] - self.vertices[(i+1)%1])
                              for i in range(4)]
         self.edge_angles = [np.pi + np.arctan(
-            (self.vertices[i][1]-self.vertices[i+1][1])/(self.vertices[i][0]-self.vertices[i+1][0])
+            (self.vertices[i][1]-self.vertices[(i+1)%4][1])/(self.vertices[i][0]-self.vertices[(i+1)%4][0])
         ) for i in range(4)]
 
         d1 = np.linalg.norm(self.vertices[0] - self.vertices[2])
@@ -114,6 +114,7 @@ def b_4(quad, input_IC):
     p_sum = 0
     for i in range(4):
         p_sum += bresenham_counter(quad.vertices[i][0], quad.vertices[i][1], quad.vertices[(i+1)%4][0], quad.vertices[(i+1)%4][1], input_IC)
+    return p_sum
 
 def theta_b_4(quad, input_IC):
     return quad.perimeter/b_4(quad, input_IC)
