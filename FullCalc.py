@@ -8,8 +8,8 @@ import math
 from pathos.multiprocessing import ProcessingPool as Pool
 from itertools import combinations
 
-def fullcalc(input_IC):
-    func = fitness.fitness_constructor(input_IC, [1,1,1,1])
+def fullcalc(input_IC, point = None):
+    func = fitness.fitness_constructor(input_IC, [1,1,1,1, 1], point)
     input_points = IC.to_positions(input_IC)
     N = input_points.shape[0]
     iterations = math.factorial(N) // (math.factorial(4) * math.factorial(N - 4))
@@ -59,9 +59,9 @@ def fullcalc_paralel(input_IC):
 
     best_value = float('inf')
     best = None
-    with Pool(os.cpu_count()*2//3) as pool:
+    with Pool(2) as pool:
         for value, pos in tqdm(pool.imap(process_comb, index_combinations), total=len(index_combinations), desc = "Паралельний повний перебір"):
             if value < best_value:
                 best_value = value
                 best = pos
-    return best
+    return (best_value, best)

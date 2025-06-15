@@ -20,7 +20,7 @@ class GeneticSolver:
         self.seeking_min = seeking_min
 
         #створюємо хромосоми
-        self.pop = [[random()*(minmax[d][1] - minmax[d][0]) + minmax[d][0] for d in range(dimensions)] for _ in range(pop_size)]
+        self.pop = [[random()*(minmax[d][1] - minmax[d][0]) + minmax[d][0] for d in range(dimensions)] for _ in range(pop_size + children + starting_overpop)]
 
     def reset(self):
         self.pop = [[random() * (self.minmax[d][1] - self.minmax[d][0]) + self.minmax[d][0] for d in range(self.dimensions)] for _ in range(self.pop_size + self.children)]
@@ -28,13 +28,13 @@ class GeneticSolver:
     def select(self):
         with Pool(os.cpu_count()*2//3) as pool:
             # Паралельно обчислити значення func для кожної хромосоми
-            fitness_values = pool.map(self.func, self.pop)
+            fitness_values = map(self.func, self.pop)
 
         pop_with_fitness = list(zip(self.pop, fitness_values))
         pop_with_fitness.sort(key=lambda x: x[1], reverse=not self.seeking_min)
 
         self.pop = [chrom for chrom, fit in pop_with_fitness[:self.pop_size]]
-        print(self.func(self.pop[0]), self.func(self.pop[-1]))
+        #print(self.func(self.pop[0]), self.func(self.pop[-1]))
         return self.pop[0]
 
     def crossover(self):
@@ -63,6 +63,8 @@ class GeneticSolver:
                 move_y = average_pos[1] * (1 + random() * self.mutation_pow - self.mutation_pow)
                 self.pop[i][::2] += move_x
                 self.pop[i][1::2] += move_y
+                for d in range(self.dimensions):
+                    self.pop[i][d] = min(self.minmax[d][1], max(self.minmax[d][0], self.pop[i][d]))
 
             if random() < self.mutation_prob:  # з імовірністю mutation_prob
                 average_pos = [np.sum(self.pop[i][::2]), np.sum(self.pop[i][1::2])]
@@ -75,6 +77,8 @@ class GeneticSolver:
                 pos[::2] += average_pos[0]
                 pos[1::2] += average_pos[1]
                 self.pop[i] = list(pos)
+                for d in range(self.dimensions):
+                    self.pop[i][d] = min(self.minmax[d][1], max(self.minmax[d][0], self.pop[i][d]))
             for d in range(self.dimensions):
                 if random() < self.mutation_prob/8:
                     self.pop[i][d] = self.pop[i][d] + ((-1)**(int(random()*2))) * self.mutation_pow * random() * (self.minmax[d][1] - self.minmax[d][0]) #

@@ -32,6 +32,7 @@ class ImageContainer:
 
     def show_with_polygon(self, polygon, title = ""):
         fig, ax = plt.subplots()
+        polygon = list(polygon)
         if self.HSV:
             plt.imshow(mcolors.hsv_to_rgb(self.array))
         else:
