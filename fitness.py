@@ -75,6 +75,7 @@ def bresenham(x0, y0, x1, y1):
 
 def bresenham_counter(x0, y0, x1, y1, input_IC):
     p = 0
+    not_p = 0
     delta_x = abs(x1 - x0)
     delta_y = abs(y1 - y0)
     sign_x = x1 >= x0
@@ -108,11 +109,13 @@ def bresenham_counter(x0, y0, x1, y1, input_IC):
             if d > width or s > height or d < 0 or s < 0:
                 break
             p += input_IC.array[s][d][0]
+            not_p += 1 - input_IC.array[s][d][0]
 
         else:
             if s > width or d > height or d < 0 or s < 0:
                 break
             p += input_IC.array[d][s][0]
+            not_p += 1 - input_IC.array[d][s][0]
         error -= delta_s
         if error < 0:
             s += sign_s
@@ -122,29 +125,24 @@ def bresenham_counter(x0, y0, x1, y1, input_IC):
         d += sign_d
     if 0 <= x1 and x1 <= width and 0 <= y1 and y1 <= height:
         p += input_IC.array[y1][x1][0]
-    return p
+        not_p += 1 - input_IC.array[y1][x1][0]
+    return p, not_p
 
 def b_4(quad, input_IC):
     p_sum = 0
     for i in range(4):
-        p_sum += bresenham_counter(quad.vertices[i][0], quad.vertices[i][1], quad.vertices[(i+1)%4][0], quad.vertices[(i+1)%4][1], input_IC)
+        p_sum += bresenham_counter(quad.vertices[i][0], quad.vertices[i][1], quad.vertices[(i+1)%4][0], quad.vertices[(i+1)%4][1], input_IC)[0]
     return max(p_sum, 0.00001)
 
 def strong_b_4(quad, input_IC):
-    p_sum = 0
+    p_sum = np.zeros(2)
     for i in range(4):
         p_sum += bresenham_counter(quad.vertices[i][0], quad.vertices[i][1], quad.vertices[(i+1)%4][0], quad.vertices[(i+1)%4][1], input_IC)
-    return max(p_sum, 0.00001)
+    return max(list(p_sum)[1]**3, 0.7)
 
 def theta_b_4(quad, input_IC):
     return (quad.perimeter-b_4(quad, input_IC))**2
 
-def theta_strong_b_4(quad, input_IC):
-    error = (quad.perimeter-b_4(quad, input_IC))**2
-    if error > 2:
-        return float("inf")
-    else:
-        return 0
 
 def is_point_in_quad(point, quad):
     x, y = point
@@ -184,18 +182,18 @@ def fitness_constructor(input_IC, consts, point = None):
             isiq = is_point_in_quad(point, quad)
             if not isiq:
                 isiq = float("inf")
-            return isiq - theta_c(quad, input_IC_points) *consts[3] + theta_strong_b_4(quad, input_IC)*consts[2] + angle_equality(quad)*consts[1] + length_equality(quad)*consts[0] + theta_2d(quad)*consts[4] - quad.perimeter - quad.space
+            return isiq - theta_c(quad, input_IC_points) *consts[3] + strong_b_4(quad, input_IC)*consts[2] + angle_equality(quad)*consts[1] + length_equality(quad)*consts[0] + theta_2d(quad)*consts[4]
     return fitness
 
-
-"""def fitness_constructor(input_IC, consts, point = None):
+"""
+def fitness_constructor(input_IC, consts, point = None):
     input_IC_points = IC.to_positions(input_IC)
     if point is None:
         def fitness(pos):
             quad = Quad(pos)
             return (length_equality(quad) + consts[0]) * \
                 (angle_equality(quad) + consts[1]) * \
-                (theta_b_4(quad, input_IC) + consts[2]) * \
+                (strong_b_4(quad, input_IC) + consts[2]) * \
                 (theta_c(quad, input_IC_points) + consts[3]) * \
                 (theta_2d(quad) + consts[4])
     else:
@@ -204,10 +202,9 @@ def fitness_constructor(input_IC, consts, point = None):
             isiq = is_point_in_quad(point, quad)
             if not isiq:
                 isiq = float("inf")
-            return isiq + (theta_c(quad, input_IC_points) + consts[3]) * (theta_b_4(quad, input_IC) + consts[2])
             return (length_equality(quad) + consts[0]) * \
                 (angle_equality(quad) + consts[1]) * \
-                (theta_b_4(quad, input_IC) + consts[2]) * \
-                (theta_c(quad, input_IC_points) + consts[3]) * \
+                (strong_b_4(quad, input_IC) + consts[2]) * \
+                (1/(theta_c(quad, input_IC_points) + consts[3])) * \
                 (theta_2d(quad) + consts[4]) + isiq
     return fitness"""

@@ -11,7 +11,7 @@ if __name__ == "__main__":
     image_0_path = "img/DSExample1.jpg"
     image_0 = IC.ImageContainer(image_0_path)
 
-    factor = 2**(-6)
+    factor = 2**(-5)
     image_0 = IC.resize(image_0, factor)
     #image_0.show("Оригінальне зображення")
     image_0 = IC.to_hsv(image_0)
@@ -44,24 +44,25 @@ if __name__ == "__main__":
     result = PSOCalc.pso_calc(image_0, {
         "a1": 0.5,  # self acceleration number
         "a2": 0.75,  # population acceleration number
-        "pop_size": 1000,  # population size
+        "pop_size": 250,  # population size
         "dim": 8,  # dimensions
         "pos_min": np.zeros(8),  # vector of minimum positions
         "pos_max": np.array([width, height,width, height,width, height,width, height]),  # vector of maximum positions
-        "speed_min": np.ones(8)*(-12),  # vector of min speed
-        "speed_max": np.ones(8)*(12),  # vector of max speed
-        "braking": 0.9,  # speed depletion
+        "speed_min": np.ones(8)*(-50),  # vector of min speed
+        "speed_max": np.ones(8)*(50),  # vector of max speed
+        "braking": 0.7,  # speed depletion
     }, 50, True, True, point = [55, 45])
     """
 
-    result = GeneticCalc.genetic_calc(image_0, 40, 100, 10, 8, [[0, width],[0, height]]*4,0.2,0.2,
-                                      50, True, True, point = [27, 22])
+    result = GeneticCalc.genetic_calc(image_0, 100, 400, 1000, 8, [[0, width],[0, height]]*4,0.2,0.2,
+                                      100, True, True, point = [55, 45])
 
     print(result[0:2])
     plt.plot(result[2])
     plt.title("Графік фітнес-функції")
     plt.xlabel("Ітерація")
     plt.ylabel("Значення фітнес-функції")
+    #plt.yscale("log")
     plt.show()
     polygon = fitness.order_quad_vertices(result[1])
     for y in range(image_0.array.shape[0]):
