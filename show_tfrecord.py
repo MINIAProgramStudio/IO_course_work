@@ -23,6 +23,11 @@ def parse_example(example_proto):
     return image, polygon
 
 def show_image_with_polygon(image, polygon):
+    temp_image = np.zeros_like(image)
+    temp_image[:, :, 0] = image[:, :, 2]
+    temp_image[:, :, 1] = image[:, :, 1]
+    temp_image[:, :, 2] = image[:, :, 0]
+    image = temp_image
     fig, ax = plt.subplots()
     ax.imshow(image)
     polygon_np = polygon.numpy().reshape(4, 2)

@@ -7,7 +7,7 @@ from tqdm import tqdm
 import random
 
 INPUT_SIZE = (480, 720)
-AUGMENTATIONS_PER_IMAGE = 100
+AUGMENTATIONS_PER_IMAGE = 200
 IMAGES_DIR = "dataset/manual_labeled/images"
 ANNOTATIONS_PATH = "dataset/manual_labeled/result.json"
 OUTPUT_DIR = "tfrecords"
@@ -29,37 +29,38 @@ def load_coco_annotations(json_path):
         ann_map[image_id] = polygon
     return images, ann_map
 
+
 def random_transform(image, polygon):
     h, w = image.shape[:2]
-    scale = random.uniform(0.5, 1)
-    nh, nw = int(h * scale), int(w * scale)
-    image = cv2.resize(image, (nw, nh))
-    polygon = np.array(polygon).reshape(-1, 2)
-    polygon = polygon * scale
-    angle = random.uniform(-30, 30)
-    M = cv2.getRotationMatrix2D((nw / 2, nh / 2), angle, 1.0)
-    image = cv2.warpAffine(image, M, (nw, nh))
-    ones = np.ones((polygon.shape[0], 1))
-    points_ones = np.hstack([polygon, ones])
-    polygon = M.dot(points_ones.T).T
-    crop_w, crop_h = INPUT_SIZE[1], INPUT_SIZE[0]
-    cx = nw // 2 + random.randint(-nw // 10, nw // 10)
-    cy = nh // 2 + random.randint(-nh // 10, nh // 10)
-    x0 = max(cx - crop_w // 2, 0)
-    y0 = max(cy - crop_h // 2, 0)
-    x1 = x0 + crop_w
-    y1 = y0 + crop_h
-    if x1 > nw:
-        x0 = nw - crop_w
-        x1 = nw
-    if y1 > nh:
-        y0 = nh - crop_h
-        y1 = nh
-    image = image[y0:y1, x0:x1]
-    polygon -= np.array([x0, y0])
-    polygon[:, 0] = np.clip(polygon[:, 0], 0, crop_w)
-    polygon[:, 1] = np.clip(polygon[:, 1], 0, crop_h)
-    return image, polygon.reshape(-1).tolist()
+    polygon = np.array(polygon, dtype=np.float32).reshape(-1, 2)
+    center = polygon.mean(axis=0)
+    dists = np.linalg.norm(polygon - center, axis=1)
+    max_dist = dists.max()
+    min_side = min(INPUT_SIZE)
+    max_scale = (min_side / 2) / max_dist if max_dist > 0 else 1.0
+    scale = random.uniform(0.25, min(1.5, max_scale))
+    angle = random.uniform(-45, 45)
+    M = cv2.getRotationMatrix2D(tuple(center), angle, scale)
+    ones = np.ones((polygon.shape[0], 1), dtype=np.float32)
+    polygon_homo = np.hstack([polygon, ones])
+    transformed = (M @ polygon_homo.T).T
+    min_x, min_y = transformed.min(axis=0)
+    max_x, max_y = transformed.max(axis=0)
+    out_h, out_w = INPUT_SIZE
+    max_tx = out_w - max_x
+    min_tx = -min_x
+    max_ty = out_h - max_y
+    min_ty = -min_y
+    tx = random.uniform(min_tx, max_tx)
+    ty = random.uniform(min_ty, max_ty)
+    M[0, 2] += tx
+    M[1, 2] += ty
+    warped = cv2.warpAffine(image, M, (out_w, out_h), flags=cv2.INTER_LINEAR, borderMode=cv2.BORDER_REFLECT)
+    transformed = (M @ polygon_homo.T).T
+    transformed[:, 0] = np.clip(transformed[:, 0], 0, out_w - 1)
+    transformed[:, 1] = np.clip(transformed[:, 1], 0, out_h - 1)
+
+    return warped, transformed.reshape(-1).tolist()
 
 def ensure_rgb(image):
     if image.ndim == 2:

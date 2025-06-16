@@ -16,26 +16,20 @@ class CustomPreprocessingLayerHSV(tf.keras.layers.Layer):
         super(CustomPreprocessingLayerHSV, self).__init__(**kwargs)
 
     def call(self, inputs):
-        # Перетворення з RGB в HSV
         hsv_inputs = tf.image.rgb_to_hsv(inputs)
-
-        # Застосування умов для HSV
         condition = tf.logical_and(
             tf.logical_and(
-                tf.abs(hsv_inputs[..., 1] - 0.382) < 0.2,  # Умова для S (насиченість)
-                tf.abs(hsv_inputs[..., 0] - 0.05) < 0.1    # Умова для H (тон)
+                tf.abs(hsv_inputs[..., 1] - 0.382) < 0.2,
+                tf.abs(hsv_inputs[..., 0] - 0.05) < 0.1
             ),
-            hsv_inputs[..., 2] < tf.reduce_mean(hsv_inputs[2])           # Умова для V (яскравість)
+            hsv_inputs[..., 2] < tf.reduce_mean(hsv_inputs[..., 2])
         )
-
-        # Застосування правила: якщо умова виконується, піксель = [1, 1, 1], інакше [0, 0, 0]
         output = tf.where(
             condition[..., tf.newaxis],
-            tf.ones_like(inputs),  # [1, 1, 1]
-            tf.zeros_like(inputs)  # [0, 0, 0]
+            tf.ones_like(inputs),
+            tf.zeros_like(inputs)
         )
         return output
-
     def get_config(self):
         config = super(CustomPreprocessingLayerHSV, self).get_config()
         return config
@@ -71,8 +65,8 @@ def load_dataset(tfrecord_path, batch_size, shuffle=True):
     return dataset
 
 
-BASE = 1
-MODEL_SAVE_PATH = "models/" + "CNN_224_" + str(2**BASE) + ".keras"
+BASE = 2
+MODEL_SAVE_PATH = "models/" + "CNN_rule_BASE_" + str(BASE) + ".keras"
 def build_cnn_model(BASE):
     inputs = tf.keras.Input(shape=INPUT_SIZE)
     x = CustomPreprocessingLayerHSV()(inputs)
@@ -91,14 +85,37 @@ def build_cnn_model(BASE):
     model = tf.keras.Model(inputs, outputs)
     return model
 
+def build_dense_model(BASE):
+    inputs = tf.keras.Input(shape=INPUT_SIZE)
+    #x = CustomPreprocessingLayerHSV()(inputs)
+    x = tf.keras.layers.Conv2D(2**(BASE), 3, activation='relu', padding='same')(inputs)
+    x = tf.keras.layers.AveragePooling2D()(x)
+    x = tf.keras.layers.Conv2D(2 ** (BASE), 3, activation='relu', padding='same')(inputs)
+    x = tf.keras.layers.AveragePooling2D()(x)
+    x = tf.keras.layers.Conv2D(2 ** (BASE), 3, activation='relu', padding='same')(inputs)
+    x = tf.keras.layers.AveragePooling2D()(x)
+    x = tf.keras.layers.Flatten()(x)
+    x = tf.keras.layers.Dense(2 ** (BASE), activation='relu')(x)
+    x = tf.keras.layers.Dropout(0.1)(x)
+    x = tf.keras.layers.Dense(2 ** (BASE), activation='relu')(x)
+    x = tf.keras.layers.Dropout(0.1)(x)
+    x = tf.keras.layers.Dense(2 ** (BASE), activation='relu')(x)
+    x = tf.keras.layers.Dropout(0.1)(x)
+    x = tf.keras.layers.Dense(2 ** (BASE), activation='relu')(x)
+    x = tf.keras.layers.Dropout(0.1)(x)
+    outputs = tf.keras.layers.Dense(8)(x)  # 8 координат чотирикутника
+
+    model = tf.keras.Model(inputs, outputs)
+    return model
+
 def train():
-    batch_size = 16
+    batch_size = 4
     train_ds = load_dataset(TRAIN_FILE, batch_size=batch_size)
     val_ds = load_dataset(VAL_FILE, batch_size=batch_size)
     callbacks = [
         tf.keras.callbacks.EarlyStopping(
             monitor='val_loss',
-            patience=25,
+            patience=10,
             restore_best_weights=True
         ),
         tf.keras.callbacks.ModelCheckpoint(
@@ -116,7 +133,7 @@ def train():
     plt.plot(history.history["val_loss"], label="val_loss")
     plt.legend()
     plt.yscale("log")
-    plt.title("CNN, BASE = "+str(BASE))
+    plt.title("Dense, BASE = "+str(BASE))
     plt.show()
 
 train()
