@@ -7,10 +7,10 @@ from tqdm import tqdm
 import random
 
 INPUT_SIZE = (480, 720)
-AUGMENTATIONS_PER_IMAGE = 20
+AUGMENTATIONS_PER_IMAGE = 100
 IMAGES_DIR = "dataset/manual_labeled/images"
 ANNOTATIONS_PATH = "dataset/manual_labeled/result.json"
-OUTPUT_DIR = "tfrecord_output"
+OUTPUT_DIR = "tfrecords"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 def load_coco_annotations(json_path):
@@ -57,8 +57,6 @@ def random_transform(image, polygon):
         y1 = nh
     image = image[y0:y1, x0:x1]
     polygon -= np.array([x0, y0])
-    noise = np.random.normal(0, 5, image.shape).astype(np.uint8)
-    image = cv2.add(image, noise)
     polygon[:, 0] = np.clip(polygon[:, 0], 0, crop_w)
     polygon[:, 1] = np.clip(polygon[:, 1], 0, crop_h)
     return image, polygon.reshape(-1).tolist()

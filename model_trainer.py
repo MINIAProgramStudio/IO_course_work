@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 BATCH_SIZE = 16
 EPOCHS = 10
 INPUT_SIZE = (480, 720, 3)
-TFRECORD_DIR = "tfrecord_output"
+TFRECORD_DIR = "tfrecords"
 TRAIN_FILE = os.path.join(TFRECORD_DIR, "train.tfrecord")
 VAL_FILE = os.path.join(TFRECORD_DIR, "val.tfrecord")
 

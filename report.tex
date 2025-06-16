@@ -123,7 +123,7 @@
 Необхідно розпізнати робочу поверхню столу FFF 3D принтера Bambulab A1 mini. Дана модель має декілька різних змінних робочих поверхонь, але найбільш розповсюджена -- PEI-пластина.\\
 \begin{figure}[H]
   \center
-  \includegraphics[width=0.7\textwidth]{PEIPlate}
+  \includegraphics[width=0.5\textwidth]{PEIPlate}
   \textbf{\caption{PEI-пластина. На зображенні справа показано робочу зону}}
   \label{fig:PEI-plate}
 \end{figure}
@@ -148,7 +148,7 @@
 Щоб отримати ідеальне значення кольорів столу і корпусу використано фотографію принтеру в типових умовах освітлення, отриману на камеру телефона.
 \begin{figure}[H]
   \center
-  \includegraphics[width=0.7\textwidth]{DSExample1.jpg}
+  \includegraphics[width=0.5\textwidth]{DSExample1.jpg}
   \textbf{\caption{Зображення принтера отримане за допомогою камери телефона}}
   \label{fig:DSExample1}
 \end{figure}
@@ -158,7 +158,7 @@
 Покладено що насиченість для корпусу має бути менша за 0.2, при будь-якому значенні тону. Дані правила застосовані для даного зображення.
 \begin{figure}[H]
   \center
-  \includegraphics[width=0.7\textwidth]{HSVContext1.png}
+  \includegraphics[width=0.5\textwidth]{HSVContext1.png}
   \textbf{\caption{Перший набір правил застосований до зображення: правила для столу червоним, правила для корпусу білим}}
   \label{fig:HSVContext1}
 \end{figure}
@@ -167,7 +167,7 @@
 Щоб уникнути таких спрацювань, було додано правило на яскравість: для столу яскравість має бути меншою за середню на зображенні, а для корпусу -- більшою.
 \begin{figure}[H]
   \center
-  \includegraphics[width=0.7\textwidth]{HSVContext2.png}
+  \includegraphics[width=0.5\textwidth]{HSVContext2.png}
   \textbf{\caption{Другий набір правил застосований до зображення}}
   \label{fig:HSVContext2}
 \end{figure}
@@ -175,7 +175,7 @@
 Дане розширення правил ще раз значно зменшило область пошуку. Проте, частина столу не фарбується в червоний, відповідно необхідно збільшити допустимі відхилення тону і насиченості. Допустимі відхилення збільшено вдвічі.
 \begin{figure}[H]
   \center
-  \includegraphics[width=0.7\textwidth]{HSVContext3.png}
+  \includegraphics[width=0.5\textwidth]{HSVContext3.png}
   \textbf{\caption{Третій набір правил застосований до зображення}}
   \label{fig:HSVContext3}
 \end{figure}
@@ -208,7 +208,7 @@ kernel =
 
 \begin{figure}[H]
   \center
-  \includegraphics[width=0.7\textwidth]{BordersMasked.png}
+  \includegraphics[width=0.5\textwidth]{BordersMasked.png}
   \textbf{\caption{Порогова бінаризація RGB границь з порогом 0.2}}
   \label{fig:BordersMasked}
 \end{figure}
@@ -358,7 +358,7 @@ fitness = \theta_\text{пар.}\cdot (\theta_{B_4}+c_3)\cdot (\theta_c + c_4)\te
 
 \begin{figure}[H]
   \center
-  \includegraphics[width=0.7\textwidth]{LabelDemo.png}
+  \includegraphics[width=0.5\textwidth]{LabelDemo.png}
   \textbf{\caption{Приклад розміченого зображення}}
   \label{fig:LabelDemo}
 \end{figure}
@@ -424,28 +424,6 @@ fitness = \theta_\text{пар.}\cdot (\theta_{B_4}+c_3)\cdot (\theta_c + c_4)\te
 
 \subsection{PSO та покращення фітнес-функції}
 Створено функцію яка застосовує ройовий алгоритм PSO для вхідного зображення з заданими набором гіпер параметрів і кількістю ітерацій.
-
-\begin{table}[H]
-  \begin{center}
-    \begin{tabular}{ |c|c| }
-      \hline
-      Основні параметри & Значення \\
-      \hline
-      Прискорення до найкращого власного значення & 1 \\
-      \hline
-      Прискорення до найкращого значення популяції & 1.5 \\
-      \hline
-      Розмір популяції & 250 \\
-      \hline
-      Максимальна швидкість & 100 \\
-      \hline
-      Збереження швидкості (анти гальмування) & 90\%\\ 
-      \hline  
-    \end{tabular}
-    \caption{Таблиця значень гіпер параметрів для перших тестових запусків PSO}
-    \label{table:1}
-  \end{center}
-\end{table}
 
 \begin{figure}[H]
   \center
@@ -520,6 +498,22 @@ fitness = \theta_\text{пар.}^2\cdot (\theta_{B_4}+c_3)^2\cdot (\theta_c + c_4
 \end{figure}
 Після ще декількох експериментів з фітнес функцією та оцінками зроблено висновок, що побудовані оцінки та фітнес-функція не здатні забезпечити бажаний результат.
 
+\subsection{Використання адитивної фітнес-функції}
+Фітнес-функцію замінено на адитивну:
+\[
+  fitness = \mathcal{I} + \theta_E \cdot c_1 + \theta_\alpha \cdot c_2 + \Theta_{B_4} \cdot c_3 - \theta_c \cdot c_4 + \theta_{2D} * c_5,
+\]
+де $\mathcal{I}$ додає нескінченність, якщо контекстна точка не в чотирикутнику, $\Theta_{B_4}$ повертає куб суми чорних пікселів вздовж периметру, $\theta_c$ повертає кількість білих пікселів всередині чотирикутника.
+\begin{figure}[H]
+  \center
+  \includegraphics[width=\textwidth]{AdditiveResult.png}
+  \textbf{\caption{Результат роботи протягом ~8 хвилин PSO (зверху) та генетичного алгоритму (знизу) для аддитивної фітнес-функції для зменшеного в 16 разів зображення}}
+  \label{fig:AdditiveResult}
+\end{figure}
+Дані результати є значно кращими за попередні. Виконано декілька експериментів з різними гіпер параметрами та розмірами зображення. 
+Для ще більш зменшених зображень алгоритми працювали швидше, але їх розв'язки були занадто неточними. 
+Для зображень зменшених в 16 і 8 разів, необхідно жертвувати розміром популяції та кількістю ітерацій, тож результат не покращується.
+
 \section{Побудова нейронних мереж для вирішення задачі}
 \subsection{Загальна структура нейронних мереж}
 Вихідним шаром нейронної мережі має бути шар що повертає 8 значень координат. Вхідний шар -- довільний для зображень, може приймати на вхід оригінальне зображення, або контекст.
@@ -548,7 +542,7 @@ fitness = \theta_\text{пар.}^2\cdot (\theta_{B_4}+c_3)^2\cdot (\theta_c + c_4
 Після вхідного шару додано шар, який застосовує контекстне правило столу до зображення і повертає маску.
 \begin{figure}[H]
   \center
-  \includegraphics[width=0.5\textwidth]{CNNRules.png.png}
+  \includegraphics[width=0.5\textwidth]{CNNBASEResult.png}
   \textbf{\caption{Графік функції втрат для моделі з конекстним правилом}}
   \label{fig:CNNBASEResult}
 \end{figure}

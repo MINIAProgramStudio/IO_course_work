@@ -198,7 +198,7 @@ def fitness_constructor(input_IC, consts, point = None):
                 (theta_2d(quad) + consts[4])
     else:
         def fitness(pos):
-            quad = Quad(pos)
+            quad = Quad(pos
             isiq = is_point_in_quad(point, quad)
             if not isiq:
                 isiq = float("inf")
